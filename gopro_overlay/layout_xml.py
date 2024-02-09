@@ -20,6 +20,7 @@ from .exceptions import Defect
 from .layout_xml_attribute import allow_attributes
 from .log import log
 from .widgets.asi import AirspeedIndicator
+from .widgets.msi import MotorspeedIndicator, MotorspeedIndicator2
 from .widgets.bar import Bar
 from .widgets.chart import SimpleChart
 from .widgets.compass import Compass
@@ -272,6 +273,7 @@ def metric_accessor_from(name: str) -> Callable[[Entry], Optional[pint.Quantity]
         "power": lambda e: e.power,
         "speed": lambda e: e.speed if e.speed is not None else e.cspeed,
         "cspeed": lambda e: e.cspeed,
+        "accel": lambda e: e.accel,
         "temp": lambda e: e.atemp,
         "gradient": lambda e: e.grad if e.grad is not None else e.cgrad,
         "cgrad": lambda e: e.cgrad,
@@ -438,7 +440,7 @@ class Widgets:
             invert=battrib(element, "invert", d=True)
         )
 
-    @allow_attributes({"x", "y", "size", "format", "truncate", "align", "cache", "rgb"})
+    @allow_attributes({"x", "y", "size", "format", "truncate", "align", "cache", "rgb", "outline", "outline_width"})
     def create_datetime(self, element, entry, **kwargs):
         return text(
             at=at(element),
@@ -446,7 +448,9 @@ class Widgets:
             font=self._font(element, "size", d=16),
             align=attrib(element, "align", d="left"),
             cache=battrib(element, "cache", d=True),
-            fill=rgbattr(element, "rgb", d=(255, 255, 255))
+            fill=rgbattr(element, "rgb", d=(255, 255, 255)),
+            stroke=rgbattr(element, "outline", d=(0, 0, 0)),
+            stroke_width=iattrib(element, "outline_width", d=2)
         )
 
     @allow_attributes({"x", "y", "size", "align", "direction", "rgb", "outline", "outline_width"})
@@ -660,6 +664,45 @@ class Widgets:
             rotate=iattrib(element, "rotate", d=0),
         )
 
+    @allow_attributes({"size", "metric", "units", "textsize", "needle", "green", "yellow", "end", "rotate", "outline"})
+    def create_msi(self, element, entry, **kwargs) -> Widget:
+        return MotorspeedIndicator(
+            size=iattrib(element, "size", d=256),
+            reading=metric_value(
+                entry,
+                accessor=metric_accessor_from(attrib(element, "metric", d="speed")),
+                converter=self.converters.converter(attrib(element, "units", d="knots")),
+                formatter=lambda q: q.m,
+                default=0
+            ),
+            font=self.font(iattrib(element, "textsize", d=16)),
+            needle=iattrib(element, "needle", d=0),
+            green=iattrib(element, "green", d=0),
+            yellow=iattrib(element, "yellow", d=130),
+            end=iattrib(element, "end", d=180),
+            rotate=iattrib(element, "rotate", d=180),
+            outline=iattrib(element, "outline", d=2)
+        )
+    
+    @allow_attributes({"size", "metric", "units", "textsize", "green", "yellow", "end", "rotate", "outline"})
+    def create_msi2(self, element, entry, **kwargs) -> Widget:
+        return MotorspeedIndicator2(
+            size=iattrib(element, "size", d=256),
+            reading=metric_value(
+                entry,
+                accessor=metric_accessor_from(attrib(element, "metric", d="speed")),
+                converter=self.converters.converter(attrib(element, "units", d="knots")),
+                formatter=lambda q: q.m,
+                default=0
+            ),
+            font=self.font(iattrib(element, "textsize", d=16)),
+            green=iattrib(element, "green", d=0),
+            yellow=iattrib(element, "yellow", d=130),
+            end=iattrib(element, "end", d=180),
+            rotate=iattrib(element, "rotate", d=180),
+            outline=iattrib(element, "outline", d=2)
+        )
+    
     @allow_attributes({"size", "lock_none", "lock_unknown", "lock_2d", "lock_3d"})
     def create_gps_lock_icon(self, element, entry, **kwargs) -> Widget:
         at = Coordinate(0, 0)
